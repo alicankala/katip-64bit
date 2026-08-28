@@ -1,18 +1,72 @@
-# Vue 3 + TypeScript + Vite
+# Kâtip — Oto Servis Takip Sistemi
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Kâtip, oto servislerinin günlük operasyonlarını tek bir masaüstü uygulamasından yönetmesi için geliştirilmiş servis takip sistemidir.
 
-## Recommended IDE Setup
+Müşteri araç kabulünden iş emrine, stok takibinden cari hesaba, kâr raporundan gün sonu kapanışına kadar servis içerisindeki temel süreçleri tek yerde toplar.
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+## Özellikler
 
-## Type Support For `.vue` Imports in TS
+- Müşteri kayıt ve yönetimi
+- Araç kayıt ve servis geçmişi
+- Hızlı servis kabul
+- İş emri oluşturma ve durum takibi
+- Parça ve stok yönetimi
+- Kritik stok uyarıları
+- Cari hesap takibi
+- Müşteri alacakları
+- Tedarikçi borçları
+- İşletme giderleri
+- Tahsilat ve ödeme takibi
+- İş emri bazlı kâr hesabı
+- Genel işletme kâr raporu
+- Gün sonu kasa ve tahsilat özeti
+- Plaka / müşteri / telefon ile hızlı arama
+- Yerel veritabanı ile çalışma
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+## Kimler için?
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+Kâtip özellikle;
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+- Oto servisleri
+- Özel araç servisleri
+- Mekanik servisler
+- Oto elektrik servisleri
+- Küçük ve orta ölçekli otomotiv işletmeleri
+
+için tasarlanmıştır.
+
+## Kullanım Akışı
+
+1. Araç servise gelir.
+2. Müşteri ve araç bilgileri girilir.
+3. İş emri otomatik oluşturulur.
+4. Yapılan işlemler ve kullanılan parçalar eklenir.
+5. İş emrinin durumu takip edilir.
+6. Tahsilat kaydedilir.
+7. Gelir, maliyet ve kâr otomatik hesaplanır.
+8. Gün sonunda kasa özeti görüntülenir.
+
+## Teknoloji
+
+- Electron
+- Vue 3
+- TypeScript
+- SQLite
+- PrimeVue
+- Vite
+
+## Platform
+
+Windows masaüstü uygulaması.
+
+Eski Windows sistemleri için ayrıca x86 uyumlu sürüm bulunmaktadır.
+
+## Durum
+
+Kâtip aktif olarak geliştirilmektedir.
+
+Demo / kullanım / ticari kullanım hakkında bilgi için iletişime geçebilirsiniz.
+
+---
+
+Developed by Alican Kala
