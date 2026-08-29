@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import log from 'electron-log/main'
 import { autoUpdater } from 'electron-updater'
+import { disAdresMi, yeniPencereKarari } from './windowOpenPolicy.js'
 import { runPhoneServerMigrations } from './phoneServer.js'
 import { isRestoreInProgress } from './restoreState.js'
 import { fotografSemasiniTanimla, fotografProtokolunuKaydet } from './photoProtocol.js'
@@ -118,17 +119,30 @@ function createWindow() {
     }
   })
 
-  // Uygulama tek pencerede çalışır ve yalnızca kendi yerel arayüzünü yükler.
-  // Aşağıdaki iki koruma, beklenmedik bir bağlantının (ör. arayüze bir şekilde
-  // sızmış bir adres) kendi penceresini açmasını ya da ana pencereyi dış bir
-  // siteye götürmesini engeller. Dış adresler sistem tarayıcısına yönlendirilir.
-  const disAdresMi = (url: string) => /^https?:\/\//i.test(url)
-
+  // Uygulama yalnızca kendi yerel arayüzünü ve HTML'i renderer tarafından
+  // doldurulan boş yazdırma pencerelerini açar. Uzak adresler uygulamaya
+  // yüklenmez; sistem tarayıcısına yönlendirilir.
   win.webContents.setWindowOpenHandler(({ url }) => {
+    const karar = yeniPencereKarari(url)
+    if (karar.action === 'allow') return karar
     if (disAdresMi(url)) {
       void shell.openExternal(url)
     }
-    return { action: 'deny' }
+    return karar
+  })
+
+  // Yazdırma penceresinin kendisinden yeni bir pencere zinciri açılamaz.
+  // Bir HTTP(S) bağlantısı eklenirse yalnızca varsayılan tarayıcıya gider.
+  win.webContents.on('did-create-window', (yeniPencere) => {
+    yeniPencere.webContents.setWindowOpenHandler(({ url }) => {
+      if (disAdresMi(url)) void shell.openExternal(url)
+      return { action: 'deny' }
+    })
+
+    yeniPencere.webContents.on('will-navigate', (event, url) => {
+      event.preventDefault()
+      if (disAdresMi(url)) void shell.openExternal(url)
+    })
   })
 
   win.webContents.on('will-navigate', (event, url) => {
