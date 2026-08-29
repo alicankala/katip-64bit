@@ -55,7 +55,8 @@ import { registerMarketHandlers } from './controllers/marketController.js'
 import {
   registerBackupHandlers,
   otomatikYedekZamanlayicisiniBaslat,
-  otomatikYedekAlBackend
+  otomatikYedekAlBackend,
+  guncellemeOncesiYedekAlBackend
 } from './controllers/backupController.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -258,6 +259,7 @@ function guncellemeHatasiniCevir(error: unknown): { mesaj: string; internetYok: 
 
 let guncellemeDurumu: GuncellemeDurumu = { durum: 'bilinmiyor' }
 let guncellemeDinleyicileriKuruldu = false
+let guncellemeKuruluyor = false
 
 function guncellemeDurumunuYayinla(yeni: GuncellemeDurumu): void {
   guncellemeDurumu = yeni
@@ -272,6 +274,9 @@ function guncellemeDinleyicileriniKur(): void {
 
   autoUpdater.logger = log
   autoUpdater.autoDownload = true
+  // Kurulum yalnız kullanıcı komutuyla ve güncelleme öncesi tam yedek başarıyla
+  // tamamlandıktan sonra başlatılır.
+  autoUpdater.autoInstallOnAppQuit = false
 
   autoUpdater.on('checking-for-update', () => {
     guncellemeDurumunuYayinla({ durum: 'denetleniyor' })
@@ -301,6 +306,10 @@ function guncellemeDinleyicileriniKur(): void {
     // Ham hata log dosyasına gider (Ayarlar → Log Klasörünü Aç), arayüze sadeleştirilmiş hâli.
     console.error('Güncelleme hatası:', err)
     const { mesaj, internetYok } = guncellemeHatasiniCevir(err)
+    if (guncellemeKuruluyor) {
+      guncellemeKuruluyor = false
+      isQuitting = false
+    }
     guncellemeDurumunuYayinla({ durum: 'hata', hata: mesaj, internetYok })
   })
 }
@@ -380,19 +389,49 @@ function ipcKopruleriniKur() {
     }
   })
 
-  kanalEkle('guncellemeyi-kur', () => {
+  kanalEkle('guncellemeyi-kur', async () => {
     if (guncellemeDurumu.durum !== 'hazir') {
       return { success: false, error: 'Kurulmaya hazır bir güncelleme yok.' }
     }
 
-    // quitAndInstall uygulamayı kapatır; kapanışta alınan yedek 'before-quit'
-    // içinde çalışmaya devam eder, kurulum uygulama kapanana kadar bekler.
-    // setImmediate içinde yakalanmayan bir hata, Electron'un İngilizce
-    // "A JavaScript error occurred in the main process" kutusunu açardı.
+    if (guncellemeKuruluyor) {
+      return { success: false, error: 'Güncelleme kurulumu zaten hazırlanıyor.' }
+    }
+
+    guncellemeKuruluyor = true
+
+    // Etkin veritabanı yerinde değiştirilmez. SQLite'ın tutarlı anlık görüntüsü
+    // ve fotoğraflar ayrı ZIP'e kopyalanır; yedek başarısızsa kurulum başlamaz.
+    let yedekSonucu
+    try {
+      yedekSonucu = await guncellemeOncesiYedekAlBackend()
+    } catch (error) {
+      console.error('[UpdateInstall] Güncelleme öncesi yedek hatası:', error)
+      guncellemeKuruluyor = false
+      return {
+        success: false,
+        error: 'Güncelleme kurulmadı: güvenlik yedeği alınamadı. Diskte boş alan olduğunu kontrol edin.'
+      }
+    }
+
+    if (!yedekSonucu.success) {
+      console.error('[UpdateInstall] Güncelleme öncesi yedek alınamadı:', yedekSonucu.error)
+      guncellemeKuruluyor = false
+      return {
+        success: false,
+        error: `Güncelleme kurulmadı: güvenlik yedeği alınamadı. (${yedekSonucu.error || 'bilinmeyen hata'})`
+      }
+    }
+
+    console.log('[UpdateInstall] Güncelleme öncesi tam yedek hazır:', yedekSonucu.path)
+
     setImmediate(() => {
       try {
+        isQuitting = true
         autoUpdater.quitAndInstall()
       } catch (error) {
+        isQuitting = false
+        guncellemeKuruluyor = false
         console.error('Güncelleme kurulum hatası:', error)
         guncellemeDurumunuYayinla({
           durum: 'hata',
@@ -400,7 +439,7 @@ function ipcKopruleriniKur() {
         })
       }
     })
-    return { success: true }
+    return { success: true, backupCreated: true }
   })
 
   // Tüm IPC controller kaydı
