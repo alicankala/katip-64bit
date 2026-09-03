@@ -100,6 +100,7 @@ if (app.isPackaged) {
 let gunSonuHatirlatmasiAtlandi = false
 
 function createWindow() {
+  const kayitliTema = ayarlariGetirBackend()?.settings?.theme
   win = new BrowserWindow({
     title: 'Kâtip',
     width: 1440,
@@ -112,7 +113,7 @@ function createWindow() {
     center: true,
     show: false,
     frame: false,
-    backgroundColor: '#0f172a',
+    backgroundColor: kayitliTema === 'dark' ? '#0f172a' : '#e6ecf2',
     icon: path.join(process.env.VITE_PUBLIC, 'icon.ico'),
     autoHideMenuBar: true,
     webPreferences: {
@@ -428,7 +429,7 @@ function ipcKopruleriniKur() {
     setImmediate(() => {
       try {
         isQuitting = true
-        autoUpdater.quitAndInstall()
+        autoUpdater.quitAndInstall(true, true)
       } catch (error) {
         isQuitting = false
         guncellemeKuruluyor = false
