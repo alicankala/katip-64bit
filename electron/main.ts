@@ -432,11 +432,13 @@ function ipcKopruleriniKur() {
     console.log('[UpdateInstall] Güncelleme öncesi tam yedek hazır:', yedekSonucu.path)
     guncellemeDurumunuYayinla({ durum: 'kuruluyor', surum: kurulacakSurum, yuzde: 100, asama: 'kurulum-basliyor' })
 
-    // Renderer son durumu ekrana çizebilsin; ardından NSIS sessiz çalışır.
+    // Renderer son durumu ekrana çizebilsin; ardından NSIS yalnız gerçek kurulum
+    // ilerlemesini gösterir. Güncelleme sayfaları ve Finish beklemesi installer.nsh
+    // tarafından atlanır, kurulum bitince yeni sürüm kendiliğinden açılır.
     setTimeout(() => {
       try {
         isQuitting = true
-        autoUpdater.quitAndInstall(true, true)
+        autoUpdater.quitAndInstall(false, true)
       } catch (error) {
         isQuitting = false
         guncellemeKuruluyor = false
