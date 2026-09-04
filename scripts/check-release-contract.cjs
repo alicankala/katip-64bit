@@ -8,6 +8,7 @@ const builder = read('electron-builder.json5')
 const workflow = read('.github/workflows/database-integration.yml')
 const releaseScript = read('scripts/yayinla.ps1')
 const main = read('electron/main.ts')
+const appView = read('src/App.vue')
 const database = read('electron/database.js')
 const settings = read('electron/controllers/settingsController.ts')
 const x86 = pkg.type !== 'module'
@@ -30,6 +31,9 @@ const checks = [
   ['Release latest.yml ve blockmap doğruluyor', releaseScript.includes("'latest.yml'") && releaseScript.includes('$blockmap')],
   ['Updater hata ve indirme olaylarını logluyor', main.includes("autoUpdater.on('error'") && main.includes("autoUpdater.on('update-downloaded'")],
   ['Updater kurulumu sessiz başlatıyor', main.includes('autoUpdater.quitAndInstall(true, true)')],
+  ['Güncelleme ilerleme çubuğu görünür', appView.includes('update-progress-track') && appView.includes('guncellemeYuzdesi')],
+  ['Güncelleme şeridi girişe bağlı değil', !appView.includes('aktifUsta && guncellemeSeridiGorunur')],
+  ['Yedek ve kurulum aşaması arayüze aktarılıyor', main.includes("asama: 'yedekleniyor'") && main.includes("asama: 'kurulum-basliyor'")],
   ['Yerel crash tanı hookları var', main.includes("process.on('uncaughtExceptionMonitor'") && main.includes("app.on('render-process-gone'")],
   ['Log klasörü kullanıcı tarafından açılabiliyor', settings.includes("kanalEkle('log-klasoru-ac'")],
   ['PIN değeri loglanmıyor', !database.includes('${usta.pin}')]
