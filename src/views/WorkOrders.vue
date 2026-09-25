@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import Paginator from 'primevue/paginator'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -929,31 +929,10 @@ const tekrarAcKaydet = async () => {
 const kalemleriAc = async (isEmri) => {
   if (!isEmri?.id) return
 
-if (seciliIsEmri.value?.id === isEmri.id) {
-  seciliIsEmri.value = null
-  kalemler.value = []
-  islemGecmisiAcik.value = false
-  maliyetKarAcik.value = false
-
-  if (typeof isEmriLoglari !== 'undefined') {
-    isEmriLoglari.value = []
-  }
-
-    Object.assign(kalemForm, {
-      type: 'Parça',
-      part_id: null,
-      description: '',
-      quantity: 1,
-      unit_price: 0
-    })
-
-    return
-  }
-
   detaySekmesi.value = 'kalemler'
   seciliIsEmri.value = isEmri
   islemGecmisiAcik.value = false
-maliyetKarAcik.value = false
+  maliyetKarAcik.value = false
 
   Object.assign(kalemForm, {
     type: 'Parça',
@@ -969,6 +948,29 @@ maliyetKarAcik.value = false
 
   if (typeof isEmriLoglariGetir === 'function') {
     await isEmriLoglariGetir(isEmri.id)
+  }
+}
+
+const isEmriListesineDon = () => {
+  seciliIsEmri.value = null
+  kalemler.value = []
+  odemeGecmisi.value = []
+  fotograflar.value = []
+  isEmriLoglari.value = []
+  islemGecmisiAcik.value = false
+  maliyetKarAcik.value = false
+
+  Object.assign(kalemForm, {
+    type: 'Parça',
+    part_id: null,
+    description: '',
+    quantity: 1,
+    unit_price: 0
+  })
+
+  if (route.query.open) {
+    const { open, ...digerSorgular } = route.query
+    router.replace({ path: route.path, query: digerSorgular })
   }
 }
 
@@ -1313,8 +1315,6 @@ const rotadakiIsEmriniAc = async () => {
 
   durumFiltresi.value = hedefIsEmri.status || 'Tümü'
   await kalemleriAc(hedefIsEmri)
-  await nextTick()
-  document.querySelector('.inline-kalem-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 onMounted(async () => {
@@ -1368,6 +1368,7 @@ onUnmounted(() => {
 
     <DestekModuUyarisi aciklama="İş emri açma / düzenleme, kalem ekleme, tamamlama ve tahsilat destek modunda kapalıdır." />
 
+    <template v-if="!seciliIsEmri">
     <!-- Toolbar & Filtre Çubuğu -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 12px;">
       <div style="display: flex; gap: 6px; flex-wrap: wrap;">
@@ -1575,11 +1576,11 @@ onUnmounted(() => {
     </div>
 
     <div
-      v-if="!seciliIsEmri"
       class="inline-empty-panel"
     >
       Kalem eklemek için listeden bir iş emri seçin.
     </div>
+    </template>
 
     <Dialog
       v-model:visible="dialogAcik"
@@ -1880,6 +1881,15 @@ onUnmounted(() => {
   v-if="seciliIsEmri"
   class="inline-kalem-panel"
 >
+    <Button
+      label="İş Emirleri Listesine Dön"
+      icon="pi pi-arrow-left"
+      severity="secondary"
+      outlined
+      size="small"
+      class="work-order-back-button"
+      @click="isEmriListesineDon"
+    />
     <EditItemDialog
       v-model:visible="kalemDialogAcik"
       :form="kalemDuzenleForm"
@@ -2487,6 +2497,10 @@ onUnmounted(() => {
   border: 1px solid var(--border-color);
   padding: 18px;
   border-radius: 10px;
+}
+
+.work-order-back-button {
+  margin-bottom: 14px;
 }
 
 .inline-kalem-header {
