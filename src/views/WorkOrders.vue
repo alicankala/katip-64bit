@@ -1885,7 +1885,6 @@ onUnmounted(() => {
       label="İş Emirleri Listesine Dön"
       icon="pi pi-arrow-left"
       severity="secondary"
-      outlined
       size="small"
       class="work-order-back-button"
       @click="isEmriListesineDon"
@@ -2501,6 +2500,24 @@ onUnmounted(() => {
 
 .work-order-back-button {
   margin-bottom: 14px;
+  min-height: 38px;
+  padding: 9px 14px;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 55%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-color) 14%, var(--bg-panel));
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.work-order-back-button:hover {
+  background: color-mix(in srgb, var(--accent-color) 22%, var(--bg-panel));
+  border-color: var(--accent-color);
+}
+
+.work-order-back-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 3px;
 }
 
 .inline-kalem-header {
