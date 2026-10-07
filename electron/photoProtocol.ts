@@ -1,3 +1,5 @@
+import { safePhotoPath } from './safePhotoPath.js'
+import { getActiveMasterSession, isPinChangeRequired } from './session.js'
 // İş emri fotoğraflarını arayüze taşıyan özel protokol.
 //
 // Eskiden `is-emri-fotograflari-getir` bir iş emrinin bütün fotoğraflarını
@@ -64,6 +66,7 @@ export function fotografSemasiniTanimla(): void {
 export function fotografProtokolunuKaydet(): void {
   protocol.registerFileProtocol(FOTO_SEMASI, (request, callback) => {
     try {
+      if (getActiveMasterSession() === null || isPinChangeRequired()) { callback({ error: NET_ERR_ACCESS_DENIED }); return }
       const id = Number(new URL(request.url).pathname.replace(/^\//, ''))
       if (!Number.isFinite(id) || id <= 0) {
         callback({ error: NET_ERR_FILE_NOT_FOUND })
@@ -81,7 +84,7 @@ export function fotografProtokolunuKaydet(): void {
       // file_path'e körü körüne güvenilmez: yedekten gelen bir kayıt başka bir
       // yeri gösteriyorsa protokol onu servis etmemeli.
       const kok = path.resolve(fotograflarKlasoru())
-      const tamYol = path.resolve(dosyaYolu)
+      const tamYol = safePhotoPath(kok, dosyaYolu)
       if (tamYol !== kok && !tamYol.startsWith(kok + path.sep)) {
         console.warn('[FotoProtokol] Fotograf klasoru disindaki yol reddedildi:', dosyaYolu)
         callback({ error: NET_ERR_ACCESS_DENIED })

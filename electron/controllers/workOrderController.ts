@@ -1,3 +1,4 @@
+import { deletePhoto } from '../safePhotoPath.js'
 import db from '../database.js'
 import { stokHareketiKaydet } from './partController.js'
 import { app, dialog } from 'electron'
@@ -265,10 +266,10 @@ export function registerWorkOrderHandlers(kanalEkle: (kanal: string, fonksiyon: 
 
         try {
           if (fsSync.existsSync(filePath)) {
-            fsSync.unlinkSync(filePath)
+            deletePhoto(path.join(app.getPath('userData'), 'fotograflar'), filePath)
           }
         } catch (e) {
-          console.warn('[Photos] İş emri silinirken fotoğraf dosyası silinemedi:', filePath, e)
+          console.warn('[Photos] Fotoğraf silinemedi.')
         }
       }
 
@@ -1607,9 +1608,9 @@ export function registerWorkOrderHandlers(kanalEkle: (kanal: string, fonksiyon: 
       const photo = db.prepare('SELECT * FROM work_order_photos WHERE id = ?').get(id) as any
       if (photo && photo.file_path) {
         try {
-          await fs.unlink(photo.file_path)
+          deletePhoto(path.join(app.getPath('userData'), 'fotograflar'), String(photo.file_path))
         } catch (e) {
-          console.warn('[Photos] Fiziksel dosya silinemedi veya zaten yok:', photo.file_path)
+          console.warn('[Photos] Fotoğraf silinemedi.')
         }
       }
 

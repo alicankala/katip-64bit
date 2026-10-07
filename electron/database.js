@@ -339,7 +339,7 @@ migrationCalistir(9, () => {
 
     if (eklendi.changes > 0) {
       // PIN değeri destek loguna hiçbir koşulda yazılmaz.
-      console.log('[Kâtip] Bir usta için başlangıç PIN hash kaydı oluşturuldu; Ayarlar bölümünden değiştirilmesi önerilir.')
+      console.log('[Kâtip] Bir usta için başlangıç PIN hash kaydı oluşturuldu; Verilere erişmeden önce ilk girişte değiştirilmesi zorunludur.')
     }
   }
 })

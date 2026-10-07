@@ -1,20 +1,24 @@
+import { verifyInstallerPublisher } from './updaterTrust.js'
 import { initDB, ayarlariGetirBackend } from './database.js'
 import { app, BrowserWindow, ipcMain, Menu, shell, type IpcMainInvokeEvent } from 'electron'
-import { fileURLToPath } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 import path from 'node:path'
 import log from 'electron-log/main'
 import { autoUpdater } from 'electron-updater'
 import { disAdresMi, yeniPencereKarari } from './windowOpenPolicy.js'
-import { runPhoneServerMigrations } from './phoneServer.js'
+import { startPhoneServer, runPhoneServerMigrations } from './phoneServer.js'
 import { isRestoreInProgress } from './restoreState.js'
 import { fotografSemasiniTanimla, fotografProtokolunuKaydet } from './photoProtocol.js'
-import { getActiveMasterSession } from './session.js'
+import { sessionAllows, trustedFrame } from './accessPolicy.js'
+import { getActiveMasterSession, isPinChangeRequired } from './session.js'
 import { destekModundaYasakMi, DESTEK_ENGEL_MESAJI } from './permissions.js'
 
 // Tüm console.log/warn/error çağrılarını kalıcı log dosyasına da yazar
 // (app.getPath('logs') altında dönen dosya; Ayarlar > Log Klasörünü Aç ile açılan klasörle aynı)
 log.initialize()
-log.transports.file.level = 'info'
+log.transports.file.level = 'warn'
+// Persist only static diagnostic labels; arguments may contain customer data or secrets.
+log.hooks.push((message) => { message.data = [String(message.data[0] || '').match(/^\[[A-Za-z]+\]/)?.[0] || '[Application diagnostic]']; return message })
 
 // Yalnız yerel log: telemetry/crash upload yoktur. Monitor olayı Node'un normal
 // çökme davranışını değiştirmeden, kapanmadan önce tanı izi bırakır.
@@ -117,7 +121,8 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC, 'icon.ico'),
     autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs')
+      preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: false, contextIsolation: true
     }
   })
 
@@ -319,6 +324,10 @@ function guncellemeDinleyicileriniKur(): void {
 function kanalEkle(kanal: string, fonksiyon: (event: IpcMainInvokeEvent, ...args: any[]) => any): void {
   ipcMain.removeHandler(kanal)
   ipcMain.handle(kanal, (event, ...args) => {
+    const expected = VITE_DEV_SERVER_URL || pathToFileURL(path.join(RENDERER_DIST, 'index.html')).href
+    if (!trustedFrame(event.sender.id, win?.webContents.id, event.senderFrame === event.sender.mainFrame, event.senderFrame?.url || '', expected) || !sessionAllows(kanal, getActiveMasterSession(), isPinChangeRequired())) {
+      return { success: false, error: 'Giriş yapın ve gerekli PIN değişimini tamamlayın.', yetkiHatasi: true }
+    }
     if (isRestoreInProgress() && kanal !== 'yedekten-geri-yukle') {
       return { success: false, error: 'Veritabanı yedekten geri yükleniyor, lütfen bekleyin.' }
     }
@@ -392,6 +401,8 @@ function ipcKopruleriniKur() {
   })
 
   kanalEkle('guncellemeyi-kur', async () => {
+    const installer = (autoUpdater as unknown as { downloadedUpdateHelper?: { file: string | null } }).downloadedUpdateHelper?.file
+    if (!await verifyInstallerPublisher(installer)) return { success: false, error: 'Güncelleme kurulumu için doğrulanmış yayıncı imzası henüz yapılandırılmadı.' }
     if (guncellemeDurumu.durum !== 'hazir') {
       return { success: false, error: 'Kurulmaya hazır bir güncelleme yok.' }
     }
@@ -512,6 +523,7 @@ app.on('activate', () => {
 app.whenReady().then(async () => {
   initDB()
   runPhoneServerMigrations()
+  if (ayarlariGetirBackend()?.settings?.phone_server_auto_start === 'true') await startPhoneServer(4317)
   // Veritabanı hazır olduktan sonra kaydedilir: işleyici fotoğraf yolunu
   // work_order_photos tablosundan okuyor.
   fotografProtokolunuKaydet()

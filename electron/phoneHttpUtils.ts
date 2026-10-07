@@ -47,3 +47,13 @@ export function escapeHtml(value: unknown): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
+
+export function safeLanRequest(host: string, origin: string | undefined, localAddresses: string[], port: number): boolean {
+  try {
+    const url = new URL('http://' + host)
+    if (url.username || url.password || url.pathname !== '/' || Number(url.port || 80) !== port || !localAddresses.includes(url.hostname)) return false
+    return !origin || origin === url.origin
+  } catch { return false }
+}
+export function photoCookie(token: string): string { return 'katip_mobile=' + encodeURIComponent(token) + '; HttpOnly; SameSite=Strict; Path=/api; Max-Age=86400' }
+export function readPhotoCookie(cookie: string): string { const match = cookie.match(/(?:^|;\s*)katip_mobile=([a-f0-9]{48})(?:;|$)/); return match?.[1] || '' }

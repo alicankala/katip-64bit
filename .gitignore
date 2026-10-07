@@ -12,3 +12,16 @@ build/
 *.sqlite3
 recovery-scripts/
 tsconfig.node.tsbuildinfo
+
+# Local security material (examples remain trackable)
+.env.*
+!.env.example
+.dev.vars*
+*.pem
+*.key
+credentials.json
+secrets.json
+*.secret
+*.dump
+*.bak
+*.backup.zip

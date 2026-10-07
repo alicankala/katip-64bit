@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
-    "electron": "^42.7.0",
+    "electron": "^42.11.11",
     "electron-builder": "^26.15.7",
     "typescript": "^5.2.2",
     "vite": "^5.1.6",

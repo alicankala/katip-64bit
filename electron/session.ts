@@ -5,13 +5,18 @@
 type MasterSession = number | 'admin' | null
 
 let activeMasterId: MasterSession = null
+let pinChangeRequired = false
+export function isPinChangeRequired(): boolean { return pinChangeRequired }
+export function requirePinChange(value: boolean): void { pinChangeRequired = value }
 
 export function setActiveMasterSession(id: MasterSession): void {
   activeMasterId = id
+  pinChangeRequired = false
 }
 
 export function clearActiveMasterSession(): void {
   activeMasterId = null
+  pinChangeRequired = false
 }
 
 export function getActiveMasterSession(): MasterSession {

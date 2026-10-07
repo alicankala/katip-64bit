@@ -8,8 +8,9 @@ import db, {
 import { app, shell } from 'electron'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { hashPin, verifyPin } from '../security.js'
-import { setActiveMasterSession } from '../session.js'
+import { hashPin, verifyPin, isBootstrapPin } from '../security.js'
+import { SETTINGS_KEYS, safeSettings } from '../accessPolicy.js'
+import { getActiveMasterSession, isPinChangeRequired, requirePinChange, setActiveMasterSession } from '../session.js'
 
 const ADMIN_PIN_SETTING_KEY = 'admin_pin_hash'
 const ADMIN_PIN_DEFAULT = '4444'
@@ -33,7 +34,7 @@ function setAdminPinHash(hash: string): void {
 // için tek nokta; hash okuma mantığı bu dosyada kalır.
 export function verifyAdminPin(pin: string): boolean {
   const girilenPin = String(pin || '').trim()
-  if (!/^\d{4}$/.test(girilenPin)) return false
+  if (!/^\d{4}$/.test(girilenPin) || isBootstrapPin(girilenPin)) return false
   return verifyPin(girilenPin, getAdminPinHash())
 }
 
@@ -118,13 +119,15 @@ export function registerSettingsHandlers(kanalEkle: (kanal: string, fonksiyon: (
 
   // 2. Ayarları Getir
   kanalEkle('ayarlari-getir', () => {
-    return ayarlariGetirBackend()
+    const result = ayarlariGetirBackend()
+    result.settings = Object.fromEntries(Object.entries(result.settings).filter(([key]) => SETTINGS_KEYS.has(key) && ((getActiveMasterSession() !== null && !isPinChangeRequired()) || ['theme','list_density','setup_wizard_done'].includes(key))))
+    return result
   })
 
   // 3. Ayar Kaydet / Toplu Kaydet
   kanalEkle('ayarlari-kaydet', (_event, settings: any) => {
-    if (typeof settings === 'object' && settings !== null) {
-      return topluAyarlariKaydetBackend(settings)
+    if (safeSettings(settings)) {
+      return topluAyarlariKaydetBackend(Object.fromEntries(Object.entries(settings).map(([key,value]) => [key,String(value)])))
     }
     return { success: false, error: 'Geçersiz ayar verisi.' }
   })
@@ -167,7 +170,9 @@ export function registerSettingsHandlers(kanalEkle: (kanal: string, fonksiyon: (
         setAdminPinHash(guncelHash)
       }
       setActiveMasterSession('admin')
-      return { success: true }
+      const requiresPinChange = isBootstrapPin(girilenPin)
+      requirePinChange(requiresPinChange)
+      return { success: true, requiresPinChange }
     } catch (error) {
       return { success: false, error: getErrorMessage(error) }
     }
@@ -176,17 +181,19 @@ export function registerSettingsHandlers(kanalEkle: (kanal: string, fonksiyon: (
   // 8. Admin PIN Değiştir
   kanalEkle('admin-pin-degistir', (_event, veri: any) => {
     try {
+      if (getActiveMasterSession() !== 'admin') return { success: false, error: 'Admin girişi gereklidir.' }
       const eskiPin = String(veri?.eski_pin || '').trim()
       const yeniPin = String(veri?.yeni_pin || '').trim()
 
       if (!verifyPin(eskiPin, getAdminPinHash())) {
         return { success: false, error: 'Eski Admin PIN hatalı.' }
       }
-      if (!/^\d{4}$/.test(yeniPin)) {
+      if (!/^\d{4}$/.test(yeniPin) || isBootstrapPin(yeniPin) || yeniPin === eskiPin) {
         return { success: false, error: 'Yeni PIN 4 haneli olmalıdır.' }
       }
 
       setAdminPinHash(hashPin(yeniPin))
+      requirePinChange(false)
       return { success: true }
     } catch (error) {
       return { success: false, error: getErrorMessage(error) }

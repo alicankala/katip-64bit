@@ -148,7 +148,7 @@ describe('Aşama 4 yedek, restore ve telefon API entegrasyonu', () => {
   it('mimariye özgü mevcut arşiv motorunu kullanır', () => {
     if (esmRuntime) {
       expect(report.backup.engine).toBe('tar.exe')
-      expect(packageJson.devDependencies.electron).toMatch(/42\.7\.0/)
+      expect(packageJson.devDependencies.electron).toMatch(/42\./)
       expect(packageJson.dependencies['better-sqlite3']).toMatch(/12\.11\.1/)
     } else {
       expect(report.backup.engine).toBe('yazl/yauzl-streaming')

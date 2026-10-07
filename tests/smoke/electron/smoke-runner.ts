@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import fsSync from 'node:fs'
 import { realpathSync } from 'node:fs'
@@ -90,6 +91,7 @@ async function calistir(): Promise<void> {
   const closingModule = await import('../../../electron/controllers/closingController.js')
   const sessionModule = await import('../../../electron/session.js')
   const permissionsModule = await import('../../../electron/permissions.js')
+  const accessModule = await import('../../../electron/accessPolicy.js')
   const restoreStateModule = await import('../../../electron/restoreState.js')
   const windowOpenPolicyModule = await import('../../../electron/windowOpenPolicy.js')
 
@@ -104,6 +106,7 @@ async function calistir(): Promise<void> {
   const kanalEkle = (kanal: string, fonksiyon: (...args: any[]) => any) => {
     ipcMain.removeHandler(kanal)
     ipcMain.handle(kanal, (event, ...args) => {
+      if (!accessModule.trustedFrame(event.sender.id, win.webContents.id, event.senderFrame === event.sender.mainFrame, event.senderFrame?.url || '', pathToFileURL(rendererPath).href) || !accessModule.sessionAllows(kanal, sessionModule.getActiveMasterSession(), sessionModule.isPinChangeRequired())) return {success:false,yetkiHatasi:true,error:'Giriş gereklidir.'}
       if (restoreStateModule.isRestoreInProgress()) {
         return { success: false, error: 'Restore devam ediyor.' }
       }
@@ -261,6 +264,8 @@ async function calistir(): Promise<void> {
     'usta IPC'
   ))
   console.log('[SMOKE] preload-ipc')
+  const unauthenticated = JSON.parse(await javascriptCalistir(win, '(async () => JSON.stringify(await window.api.musteriEkle({name:"Denied"})))()', 'oturumsuz red'))
+  if (unauthenticated.success || !unauthenticated.yetkiHatasi) throw new Error('Unauthenticated IPC must be denied')
 
   await javascriptCalistir(win, `(() => {
     const combo = document.querySelector('[role="combobox"]')
@@ -286,11 +291,22 @@ async function calistir(): Promise<void> {
     button.click()
   })()`, 'usta girisi')
 
+  await bekle(() => javascriptCalistir(win, "document.querySelectorAll('input[type=password]').length === 3", 'PIN değişim alanı'), 'zorunlu PIN değişimi')
+  const pendingDenied = JSON.parse(await javascriptCalistir(win, '(async () => JSON.stringify(await window.api.musteriEkle({name:"Denied"})))()', 'PIN değişmeden red'))
+  if (pendingDenied.success || !pendingDenied.yetkiHatasi) throw new Error('Pending PIN must not grant data access')
+  await javascriptCalistir(win, `(() => {
+    const inputs = document.querySelectorAll('input[type=password]')
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set
+    for(const input of [inputs[1],inputs[2]]){setter.call(input,'9876');input.dispatchEvent(new Event('input',{bubbles:true}))}
+    document.querySelector('.login-button').click()
+  })()`, 'zorunlu PIN değişimi gönder')
   const loggedIn = await bekle(
     () => javascriptCalistir(win, `Boolean(document.querySelector('.status-master-box'))`, 'oturum sorgusu'),
     'başarılı usta girişi'
   )
   console.log('[SMOKE] logged-in')
+  const settingsBypass = JSON.parse(await javascriptCalistir(win, '(async () => JSON.stringify(await window.api.ayarlariKaydet({admin_pin_hash:"denied"})))()', 'ayar güvenlik reddi'))
+  if (settingsBypass.success) throw new Error('Generic settings bypass must be denied')
 
   const chainResult = JSON.parse(await javascriptCalistir(win, `(async () => JSON.stringify(await (async () => {
     const customer = await window.api.musteriEkle({

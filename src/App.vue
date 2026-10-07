@@ -18,6 +18,18 @@ const toast = useToast()
 const ustalar = ref([])
 const seciliUstaId = ref(null)
 const pin = ref('')
+const pinChangeRequired = ref(false)
+const replacementPin = ref('')
+const replacementPinConfirm = ref('')
+async function finishPinChange(res, admin = false) {
+  if (!res?.requiresPinChange) return true
+  pinChangeRequired.value = true
+  if (!/^\d{4}$/.test(replacementPin.value) || replacementPin.value !== replacementPinConfirm.value) { girisHatasi.value = 'Varsayılan PIN değişmeli. Yeni 4 haneli PIN girip doğrulayın.'; return false }
+  const args = { eski_pin: pin.value, yeni_pin: replacementPin.value, master_id: seciliUstaId.value }
+  const changed = admin ? await window.api.adminPinDegistir(args) : await window.api.ustaPinDegistir(args)
+  if (!changed?.success) { girisHatasi.value = changed?.error || 'PIN değiştirilemedi.'; return false }
+  pinChangeRequired.value = false; replacementPin.value = ''; replacementPinConfirm.value = ''; return true
+}
 const girisHatasi = ref('')
 const girisYukleniyor = ref(false)
 const aktifUsta = ref(null)
@@ -160,6 +172,7 @@ const girisYap = async () => {
     try {
       const res = await window.api.adminPinDogrula(pin.value)
       if (res?.success) {
+        if (!await finishPinChange(res, true)) return
         const adminUser = { id: 'admin', name: 'Alican Kala', role: 'admin' }
         aktifUsta.value = adminUser
         localStorage.setItem('aktifUsta', JSON.stringify(adminUser))
@@ -230,6 +243,7 @@ const girisYap = async () => {
       return
     }
 
+    if (!await finishPinChange(res)) return
     const ustaBilgisi = { id: Number(ustaObj.id), name: String(ustaObj.name || '') }
     aktifUsta.value = ustaBilgisi
     localStorage.setItem('aktifUsta', JSON.stringify(ustaBilgisi))
@@ -913,6 +927,12 @@ onUnmounted(() => {
           />
         </div>
 
+        <div v-if="pinChangeRequired" class="form-group">
+          <label>Yeni PIN (varsayılan değer kullanmayın)</label>
+          <InputText v-model="replacementPin" type="password" maxlength="4" inputmode="numeric" autocomplete="new-password" />
+          <label>Yeni PIN tekrar</label>
+          <InputText v-model="replacementPinConfirm" type="password" maxlength="4" inputmode="numeric" autocomplete="new-password" @keyup.enter="girisYap" />
+        </div>
         <div
           v-if="girisHatasi"
           class="login-error"

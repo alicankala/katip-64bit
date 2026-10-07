@@ -432,8 +432,8 @@ async function calistir(): Promise<void> {
     const outsideRow = db.prepare(`INSERT INTO work_order_photos
       (work_order_id, file_name, file_path, category, note) VALUES (?, ?, ?, ?, ?)`)
       .run(apiWorkOrderId, basename(outsidePhotoPath), outsidePhotoPath, 'Araç Kabul', '')
-    const insideResponse = await request('GET', `/api/photo?id=${insideRow.lastInsertRowid}&t=${encodeURIComponent(mobileToken)}`)
-    const outsideResponse = await request('GET', `/api/photo?id=${outsideRow.lastInsertRowid}&t=${encodeURIComponent(mobileToken)}`)
+    const insideResponse = await request('GET', `/api/photo?id=${insideRow.lastInsertRowid}`, undefined, { Cookie: `katip_mobile=${mobileToken}` })
+    const outsideResponse = await request('GET', `/api/photo?id=${outsideRow.lastInsertRowid}`, undefined, { Cookie: `katip_mobile=${mobileToken}` })
     report.phonePhoto = {
       insideStatus: insideResponse.status,
       insideHash: sha256(Buffer.from(insideResponse.body, 'utf8')),

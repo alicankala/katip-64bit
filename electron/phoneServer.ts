@@ -1,3 +1,4 @@
+import { safePhotoPath } from './safePhotoPath.js'
 import http from 'node:http'
 import os from 'node:os'
 import crypto from 'node:crypto'
@@ -7,12 +8,12 @@ import path from 'node:path'
 import { app } from 'electron'
 import db from './database.js'
 import { fotografiBufferdanKucult } from './photoUtils.js'
-import { hashPin, verifyPin } from './security'
+import { hashPin, verifyPin, isBootstrapPin } from './security'
 import { gunSonuVerisiHesapla, bugununTarihi, kapaliGunKontrol } from './controllers/closingController.js'
 import { isEmriToplaminiGuncelle } from './controllers/workOrderController.js'
 import { stokHareketiKaydet } from './controllers/partController.js'
 import { isRestoreInProgress } from './restoreState.js'
-import { escapeHtml, govdeSiniriUygula } from './phoneHttpUtils.js'
+import { escapeHtml, govdeSiniriUygula, safeLanRequest, photoCookie, readPhotoCookie } from './phoneHttpUtils.js'
 import { runPhoneServerMigrations } from './phoneMigrations.js'
 import { PRIMEICONS_FONT_CONTENT_TYPES, primeiconsAssetOku } from './phoneAssets.js'
 import {
@@ -2204,7 +2205,7 @@ const badgeText = tamamlandi
             '<i class="pi pi-tag" style="font-size: 11px;"></i> ' + escapeHtml(item.brand || '') + ' ' + escapeHtml(item.model || '') +
           '</div>' +
           '<div class="item-header" style="margin-top: 4px;">' +
-            '<span class="badge-status ' + badgeClass + '">' + badgeText + '</span>' +
+            '<span class="badge-status ' + badgeClass + '">' + escapeHtml(badgeText) + '</span>' +
             '<span style="font-size: 11px; color: var(--text-muted);">' + dateFormat(item.created_at) + '</span>' +
           '</div>' +
         '</div>';
@@ -3584,6 +3585,13 @@ document
 
     const tryListen = (port: number) => {
       const tempServer = http.createServer(async (req, res) => {
+        const addresses = ['localhost','127.0.0.1','[::1]', ...Object.values(os.networkInterfaces()).flat().filter(Boolean).map(item => item!.address)]
+        res.setHeader('Cache-Control', 'no-store')
+        res.setHeader('Referrer-Policy', 'no-referrer')
+        res.setHeader('X-Content-Type-Options', 'nosniff')
+        res.setHeader('X-Frame-Options', 'DENY')
+        if (!safeLanRequest(String(req.headers.host || ''), req.headers.origin, addresses, port) || req.headers['sec-fetch-site'] === 'cross-site') { res.writeHead(403); res.end(); return }
+
         try { req.setEncoding('utf8') } catch (e) {}
         const url = req.url || '/'
         const parsedUrl = new URL(url, 'http://localhost')
@@ -3686,6 +3694,7 @@ document
               userAgent
             })
 
+            res.setHeader('Set-Cookie', photoCookie(token))
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
             res.end(JSON.stringify({
               success: true,
@@ -3762,7 +3771,7 @@ document
                 return
               }
 
-              if (verifyPin(cleanPin, usta.pin)) {
+              if (verifyPin(cleanPin, usta.pin) && !isBootstrapPin(cleanPin)) {
                 recordLoginSuccess(ip)
                 const guncelHash = hashPin(cleanPin)
                 if (String(usta.pin || '').trim() !== guncelHash) {
@@ -3781,6 +3790,7 @@ document
                   userAgent
                 })
 
+                res.setHeader('Set-Cookie', photoCookie(token))
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
                 res.end(JSON.stringify({ success: true, usta: { id: usta.id, name: usta.name }, token }))
               } else {
@@ -3794,7 +3804,7 @@ document
               }
             } catch (e: any) {
               res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' })
-              res.end(JSON.stringify({ success: false, error: 'Geçersiz giriş isteği' }))
+              res.end(JSON.stringify({ success: false, error: e instanceof Error && e.message.startsWith('Çok fazla PIN denemesi.') ? e.message : 'Geçersiz giriş isteği' }))
             }
           })
           return
@@ -3802,13 +3812,9 @@ document
 
         // 3d. Fotoğraf baytları
         //
-        // Bu uç nokta bilerek yetki katmanının ÜSTÜNDE duruyor: adres bir
-        // <img src> içine konuyor ve tarayıcı <img> isteklerine Authorization
-        // başlığı eklemiyor. Bu yüzden oturum belirteci sorgu dizesinden
-        // (?t=) okunuyor; doğrulama aşağıdaki middleware ile aynı kurallara
-        // (oturum var mı + TTL) tabi.
+        // Fotoğraf istekleri HttpOnly oturum çerezi ile doğrulanır; URL belirteç içermez.
         if (pathName === '/api/photo') {
-          const sorguToken = String(parsedUrl.searchParams.get('t') || '').trim()
+          const sorguToken = readPhotoCookie(String(req.headers.cookie || ''))
           const fotoOturum = activeMobileSessions.get(sorguToken)
           if (!sorguToken || !fotoOturum || Date.now() - fotoOturum.lastActiveAt > SESSION_TTL_MS) {
             if (sorguToken) activeMobileSessions.delete(sorguToken)
@@ -3836,14 +3842,15 @@ document
             // Veritabanındaki yola körü körüne güvenilmez; fotoğraf klasörünün
             // dışını gösteren bir kayıt servis edilmez.
             const kok = path.resolve(path.join(app.getPath('userData'), 'fotograflar'))
-            const tamYol = path.resolve(dosyaYolu)
-            if (tamYol !== kok && !tamYol.startsWith(kok + path.sep)) {
+            const lexicalPath = path.resolve(dosyaYolu)
+            if (lexicalPath !== kok && !lexicalPath.startsWith(kok + path.sep)) {
               console.warn('[PhoneServer] Fotograf klasoru disindaki yol reddedildi:', dosyaYolu)
               res.writeHead(403)
               res.end()
               return
             }
 
+            const tamYol = safePhotoPath(kok, dosyaYolu)
             const dosyaBilgisi = await fs.stat(tamYol)
             if (!dosyaBilgisi.isFile()) throw new Error('Fotoğraf yolu bir dosya değil.')
             const uzanti = path.extname(tamYol).toLowerCase()
@@ -3895,6 +3902,7 @@ document
           return
         }
         currentSession.lastActiveAt = Date.now()
+        res.setHeader('Set-Cookie', photoCookie(cleanToken))
 
         // 3c. API: Oturum yoklaması (yalnızca canlılık kontrolü)
         //
@@ -4095,7 +4103,7 @@ document
               let url = ''
               try {
                 await fs.access(row.file_path)
-                url = `/api/photo?id=${Number(row.id)}&t=${encodeURIComponent(cleanToken)}`
+                url = `/api/photo?id=${Number(row.id)}`
               } catch (e) {
                 console.warn('[Photos] Dosya okunamadı:', row.file_path, e)
               }
@@ -4635,7 +4643,7 @@ document
                 return
               }
 
-              console.log('[PhoneServer] Kapatan Usta:', masterExists.name)
+              console.log('[PhoneServer] İş emri tamamlandı.')
 
               const woIdNum = Number(work_order_id)
               const paymentOption = String(data.payment_option || 'none')

@@ -1,6 +1,6 @@
 import db, { dbPath } from '../database.js'
-import { hashPin, verifyPin } from '../security.js'
-import { setActiveMasterSession, clearActiveMasterSession } from '../session.js'
+import { hashPin, verifyPin, isBootstrapPin } from '../security.js'
+import { setActiveMasterSession, clearActiveMasterSession, getActiveMasterSession, requirePinChange } from '../session.js'
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
@@ -18,7 +18,7 @@ export function registerMasterHandlers(kanalEkle: (kanal: string, fonksiyon: (..
         ORDER BY IFNULL(display_order, 9999) ASC, id ASC
       `).all()
 
-      return { success: true, ustalar, dbPath }
+      return { success: true, ustalar }
     } catch (error) {
       console.error('Ustaları getirme hatası:', error)
       return { success: false, error: getErrorMessage(error) }
@@ -60,9 +60,11 @@ export function registerMasterHandlers(kanalEkle: (kanal: string, fonksiyon: (..
       }
 
       setActiveMasterSession(Number(usta.id))
+      const requiresPinChange = isBootstrapPin(pin)
+      requirePinChange(requiresPinChange)
 
       return {
-        success: true,
+        success: true, requiresPinChange,
         usta: {
           id: Number(usta.id),
           name: usta.name
@@ -84,6 +86,7 @@ export function registerMasterHandlers(kanalEkle: (kanal: string, fonksiyon: (..
   kanalEkle('usta-pin-degistir', (_event, veri: any) => {
     try {
       const masterId = Number(veri.master_id)
+      if (getActiveMasterSession() !== masterId) throw new Error('Bu PIN yalnız kendi oturumunda değiştirilebilir.')
       const eskiPin = String(veri.eski_pin || '').trim()
       const yeniPin = String(veri.yeni_pin || '').trim()
 
@@ -95,7 +98,7 @@ export function registerMasterHandlers(kanalEkle: (kanal: string, fonksiyon: (..
         throw new Error('Eski PIN 4 haneli olmalıdır.')
       }
 
-      if (!/^\d{4}$/.test(yeniPin)) {
+      if (!/^\d{4}$/.test(yeniPin) || isBootstrapPin(yeniPin) || yeniPin === eskiPin) {
         throw new Error('Yeni PIN 4 haneli olmalıdır.')
       }
 
@@ -117,6 +120,7 @@ export function registerMasterHandlers(kanalEkle: (kanal: string, fonksiyon: (..
         WHERE id = ?
       `).run(hashPin(yeniPin), masterId)
 
+      requirePinChange(false)
       return { success: true }
     } catch (error) {
       console.error('PIN değiştirme hatası:', error)

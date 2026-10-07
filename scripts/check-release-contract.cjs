@@ -26,7 +26,7 @@ const checks = [
   ['NSIS mevcut kurulum kapsamını koruyor', /"oneClick"\s*:\s*false/.test(builder) && /"perMachine"\s*:\s*false/.test(builder)],
   ['Çift kurulum makine-geneline birleştiriliyor', /"selectPerMachineByDefault"\s*:\s*true/.test(builder)],
   ['Uninstall userData silmiyor', /"deleteAppDataOnUninstall"\s*:\s*false/.test(builder)],
-  ['CI build yayın yapmıyor', workflow.includes('npm run build -- --publish never')],
+  ['CI yalnız kaynak derliyor, installer/yayın üretmiyor', workflow.includes('npx vite build') && !/run:.*(?:npm run build|electron-builder|yayinla|gh release|deploy)/i.test(workflow)],
   ['Release build yayın yapmıyor', releaseScript.includes('npm run build -- --publish never')],
   ['Release script doğru repoyu hedefliyor', releaseScript.includes(`$repo = 'alicankala/${expectedRepo}'`)],
   ['Release latest.yml ve blockmap doğruluyor', releaseScript.includes("'latest.yml'") && releaseScript.includes('$blockmap')],
