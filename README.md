@@ -1,71 +1,92 @@
-# Kâtip — Oto Servis Takip Sistemi
+# Kâtip — Oto Servis Takip Sistemi (64-bit Windows)
 
-Kâtip, oto servislerinin günlük operasyonlarını tek bir masaüstü uygulamasından yönetmesi için geliştirilmiş servis takip sistemidir.
+**Güncel Sürüm: 1.9.0** · Platform: **Windows x64** · Mimari: **Electron + Vue 3 + SQLite**
 
-Müşteri araç kabulünden iş emrine, stok takibinden cari hesaba, kâr raporundan gün sonu kapanışına kadar servis içerisindeki temel süreçleri tek yerde toplar.
+**Kâtip**, oto servislerinin araç kabulünden iş emrine, yedek parça ve stok takibinden cari hesaplara, kasa ve kâr raporundan yerel ağ üzerinden mobil telefon entegrasyonuna kadar tüm günlük operasyonlarını tek bir masaüstü uygulamasından yönetmesi için geliştirilmiş kapsamlı servis takip sistemidir.
 
-## Özellikler
+Tüm veriler yerel SQLite veritabanında saklanır; internet kesintilerinden etkilenmez, güvenli yerel mimariyle çalışır.
 
-- Müşteri kayıt ve yönetimi
-- Araç kayıt ve servis geçmişi
-- Hızlı servis kabul
-- İş emri oluşturma ve durum takibi
-- Parça ve stok yönetimi
-- Kritik stok uyarıları
-- Cari hesap takibi
-- Müşteri alacakları
-- Tedarikçi borçları
-- İşletme giderleri
-- Tahsilat ve ödeme takibi
-- İş emri bazlı kâr hesabı
-- Genel işletme kâr raporu
-- Gün sonu kasa ve tahsilat özeti
-- Plaka / müşteri / telefon ile hızlı arama
-- Yerel veritabanı ile çalışma
+---
 
-## Kimler için?
+## Öne Çıkan Özellikler
 
-Kâtip özellikle;
+### 🚗 Araç Kabul & İş Emri Yönetimi
+- **Hızlı Servis Kabul:** Plaka, müşteri adı ve telefon ile anlık arama ve araç kabul kaydı.
+- **Detaylı İş Emri Takibi:** İş emri durumları (Bekliyor, İşlemde, Parça Bekliyor, Tamamlandı, Teslim Edildi), işçilik ve kullanılan parça kalemleri.
+- **Finansal Koruma:** İş emri toplamı, yapılmış olan aktif tahsilatların altına düşürülemez.
+- **Servis Geçmişi:** Araçların önceki tüm servis, işlem ve kilometre geçmişi tek ekranda.
 
-- Oto servisleri
-- Özel araç servisleri
-- Mekanik servisler
-- Oto elektrik servisleri
-- Küçük ve orta ölçekli otomotiv işletmeleri
+### 📦 Parça ve Stok Takibi
+- Barkod / kod bazlı yedek parça ve malzeme kartları.
+- Kritik stok uyarıları ve asgari stok seviyesi takibi.
+- Parça maliyetleri, satış fiyatları ve kâr marjı hesaplamaları.
+- İş emirleriyle tam entegre, transaction korumalı stok düşümü.
 
-için tasarlanmıştır.
+### 💰 Cari Hesap, Kasa & Finans
+- **Müşteri Alacakları:** Veresiye / vadeli iş emirleri ve parça ödemelerinin müşteri bazlı takibi.
+- **Tedarikçi Borçları:** Parça tedarikçilerinin cari hesapları ve borç takibi.
+- **İşletme Giderleri:** Kira, fatura, personel ve genel işletme masraflarının kaydı.
+- **Gün Sonu Kasa Özeti:** Nakit, kredi kartı ve havale/EFT tahsilat dökümü; kapalı günlerin mali hareketlerini koruyan kilit mekanizması.
+- **Kâr Raporları:** İş emri bazlı anlık net kâr hesabı ve dönemsel işletme kâr/zarar analizi.
 
-## Kullanım Akışı
+### 📱 Yerel Ağ (LAN) Telefon Sunucusu & Mobil Fotoğraf Aktarımı
+- Servis içerisindeki telefonlardan masaüstü uygulamasına **QR kod** veya **PIN** ile hızlı eşleşme.
+- Araç kabul fotoğraflarını ve hasar görsellerini cep telefonundan anında iş emrine ekleme.
+- Streaming dosya transferi, Bearer oturum doğrulaması ve yerel ağ hızında güvenli iletişim.
 
-1. Araç servise gelir.
-2. Müşteri ve araç bilgileri girilir.
-3. İş emri otomatik oluşturulur.
-4. Yapılan işlemler ve kullanılan parçalar eklenir.
-5. İş emrinin durumu takip edilir.
-6. Tahsilat kaydedilir.
-7. Gelir, maliyet ve kâr otomatik hesaplanır.
-8. Gün sonunda kasa özeti görüntülenir.
+### 🖨️ Servis Fişi & Yazdırma
+- Müşteriye teslim edilecek servis kabul ve işlem fişlerinin doğrudan ekranda önizlenmesi ve güvenli yazdırılması.
 
-## Teknoloji
+### 🛡️ Güvenli Otomatik Güncelleme & Yedekleme
+- **Kesintisiz Güncelleme:** GitHub Releases üzerinden otomatik sürüm denetimi ve arayüzde canlı indirme/kurulum ilerleme göstergesi.
+- **Pre-Update Güvenlik Kalkanı:** Güncelleme kurulmadan önce SQLite veritabanı ve fotoğrafları kapsayan tam otomatik ZIP yedeği (`tar.exe`) alınır; hata durumunda sıfır veri kaybı garantilenir.
+- **Yedekleme & Geri Yükleme:** İstendiğinde tek tıkla tam sistem yedeği oluşturma ve doğrulamalı geri yükleme (restore).
 
-- Electron
-- Vue 3
-- TypeScript
-- SQLite
-- PrimeVue
-- Vite
+---
 
-## Platform
+## Teknoloji Yığını
 
-Windows masaüstü uygulaması.
+- **Masaüstü:** [Electron](https://www.electronjs.org/) (x64)
+- **Arayüz:** [Vue 3](https://vuejs.org/) (Composition API, `<script setup>`) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/)
+- **Bileşen Kütüphanesi:** [PrimeVue](https://primevue.org/) & PrimeIcons
+- **Veritabanı:** [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) (Yerel ACID uyumlu SQLite motoru)
+- **Güncelleyici & Paketleyici:** [electron-updater](https://www.electron.build/auto-update) & [electron-builder](https://www.electron.build/) (NSIS)
+- **Mobil Köprü:** Node.js HTTP Server, QR Code (`qrcode`)
 
-Eski Windows sistemleri için ayrıca x86 uyumlu sürüm bulunmaktadır.
+---
 
-## Durum
+## Geliştirme ve Test
 
-Kâtip aktif olarak geliştirilmektedir.
+```bash
+# Bağımlılıkları yükleme
+npm install
 
-Demo / kullanım / ticari kullanım hakkında bilgi için iletişime geçebilirsiniz.
+# Geliştirme ortamını başlatma (Vite + Electron)
+npm run dev
+
+# Tip denetimi
+npx vue-tsc --noEmit
+
+# Test süiti
+npm run test:unit           # Birim testleri
+npm run test:integration    # Entegrasyon testleri
+npm run test:business       # İş mantığı ve kural testleri
+npm run test:stage4         # Stage-4 telefon API ve restore testleri
+npm run test:smoke          # Smoke ve Electron çalıştırma testleri
+
+# Mimari senkronizasyon ve release sözleşmesi kontrolleri
+npm run check:sync
+npm run check:release-contract
+
+# Üretim derlemesi (Installer çıktısı: release/ altındadır)
+npm run build
+```
+
+---
+
+## 32-bit ve Windows 7 Sürümü
+
+Eski donanımlar ve Windows 7/8 sistemleri için optimize edilmiş x86 sürümüne [alicankala/katip-32bit](https://github.com/alicankala/katip-32bit) deposundan ulaşabilirsiniz.
 
 ---
 
